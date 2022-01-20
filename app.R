@@ -1,0 +1,286 @@
+library(reshape2)
+library(ggplot2)
+library(shiny)
+
+theme_set(theme( # Theme (Hintergrund, Textgröße, Text-Positionen und -Ausrichtung)
+  axis.text.x = element_text(size=10, angle=0, vjust=0.0), 
+  axis.text.y = element_text(size = 10), 
+  axis.title = element_text(size = 20), 
+  plot.title = element_text(hjust = 0.5), 
+  legend.position="top", 
+  panel.background = element_blank(), 
+  axis.line = element_line(size = 0.5),
+  panel.border = element_blank()
+)
+)
+
+
+
+#setwd("//btb1r2.bio.uni-bayreuth.de/home/PhD/Paper/Eigene/Vinay/")
+#setwd("C:/Users/marvi/Desktop/")
+
+# read in prepared data again. 
+# this is just done to skip the time consuming step of preparing the data, when compiling the app
+mydata <- read.table(
+  file = "prep_data.txt", 
+  sep = ";",
+  dec = "."
+)
+str(mydata)
+mydata$polV <- as.factor(mydata$polV)
+mydata$pol <- as.factor(mydata$pol)
+mydata$incWater <- as.factor(mydata$incWater)
+
+
+
+# to provide easily understandable content for user, we need the full names of polymers
+polAbr <- levels(mydata$pol)
+polNames <- c("acrylnitrile-butadiene-styrole", "polyamide", "polycarbonate", "polyethylene", "polyethyleneterephthalate", "polyoxymethylene", "polypropylene", "polystyrene", "polyurethane", "polyvenylchlorite", "styrole-acrylnitrile")
+
+waterAbr <- levels(mydata$incWater)
+waterNames <- c("freshwater", "saltwater")
+
+
+server <- function(input, output, session){
+  
+  if (!interactive()) {
+    session$onSessionEnded(function() {
+      stopApp()
+      q("no")
+    })
+  }
+  
+  ##### render plots #######
+  # set which incubation water boxes are checked
+  sFW <- ""
+  sSW <- ""
+  
+  output$plot.variants <- renderPlot({
+    if(input$SW == TRUE){
+      sSW <- "SW"
+    }
+    if(input$FW == TRUE){
+      sFW <- "FW"
+    }
+    temp <- droplevels(mydata[which(mydata$pol == input$polType & 
+                                      mydata$v <= input$nV & 
+                                      (mydata$incWater == sFW |
+                                         mydata$incWater == sSW
+                                      )
+    )
+    ,])
+    
+    # if input$sep == TRUE, multiply values of each spectrum with a certain number, to split them along y-axis
+    if(input$sep == TRUE){
+      for(i in 1:length(levels(temp$polV))){
+        for(j in 1:nrow(temp)){
+          if(temp$polV[j] == levels(temp$polV)[i]){
+            temp$amp[j] <- temp$amp[j] + 0.5 * (i-1)
+          }
+        }
+      }
+    }
+    
+    g <-  ggplot(temp, 
+                 aes(x = wavenumber, 
+                     y = amp, 
+                     group = interaction(factor(v), incWater, sep = " | "),
+                     colour = interaction(factor(v), incWater, sep = " | ")
+                 )
+    )+
+      geom_line()+
+      coord_cartesian(xlim = c(500.51919, 3681.31383))+
+      ylab("Intensity")+
+      scale_color_discrete(name = "Variant number | Incubation water")
+    
+    if(input$sep == TRUE){
+      g <- g + theme(axis.text.y = element_blank(),
+                     axis.ticks.y = element_blank())
+    }
+    
+    g
+  }) # end render plot
+  
+  
+  output$plot.comp <- renderPlot({
+    temp <- droplevels(subset(mydata, (mydata$pol == input$comp.polType1 & 
+                                         mydata$v == input$comp.variant1 & 
+                                         mydata$incWater == input$comp.water1) |
+                                (mydata$pol == input$comp.polType2 & 
+                                   mydata$v == input$comp.variant2 & 
+                                   mydata$incWater == input$comp.water2)
+    )
+    )
+    #temp$col <- "blue"
+    #temp$col[which(temp$pol == input$comp.polType2 && temp$v == input$comp.variant2 && temp$incWater == input$comp.water2)] <- "red"
+    
+    ggplot(temp, 
+           aes(x = wavenumber, 
+               y = amp, 
+               group = interaction(pol, factor(v), incWater, sep = " | "),
+               colour = interaction(pol, factor(v), incWater, sep = " | ")
+           )
+    )+
+      geom_line()+
+      coord_cartesian(xlim = c(500.51919, 3681.31383))+
+      ylab("Intensity")+
+      scale_color_discrete(name = "Polymer | Variant number | Incubation water")
+  }) # end render plot
+  
+  
+  
+  output$plot.own <- renderPlot({
+    temp <- droplevels(subset(mydata, (mydata$pol == input$own.polType & 
+                                         mydata$v == input$own.variant & 
+                                         mydata$incWater == input$own.water)
+    )
+    )
+    own <- data.frame(wavenumber = temp$wavenumber,
+                      amp = strsplit(input$own.spec, "\n")[[1]],
+                      pol = "your polymer",
+                      polV = "your.V1",
+                      v = 1,
+                      incWater = " "
+    )
+    temp <- rbind(temp, own)
+    temp$amp <- as.numeric(temp$amp)
+    ggplot(temp, 
+           aes(x = wavenumber, 
+               y = amp, 
+               group = interaction(pol, factor(v), incWater, sep = " | "),
+               colour = interaction(pol, factor(v), incWater, sep = " | ")
+           )
+    )+
+      geom_line()+
+      coord_cartesian(xlim = c(500.51919, 3681.31383))+
+      ylab("Intensity")+
+      scale_color_discrete(name = "Polymer | Variant number | Incubation water")
+  }) # end render plot
+  
+} # end server
+
+
+
+#### ui #####
+ui <- fluidPage(
+  fluidRow(
+    titlePanel("Shiny Raman-MP Spectra"),
+    mainPanel(
+      tabsetPanel(
+        tabPanel("Show available Spectra",
+                 column(6,
+                        selectInput("polType", 
+                                    label = "Select polymer type:", 
+                                    choices = levels(mydata$pol)[-12], 
+                                    selected = "PET"
+                        ),
+                        sliderInput("nV", 
+                                    label = "Number of variants (1 = pristine):", 
+                                    min = 1, 
+                                    max = max(mydata$v, na.rm = TRUE), 
+                                    value = 1, 
+                                    step = 1
+                        ),
+                 ),
+                 column(5, offset = 1,
+                        fluidRow(
+                          checkboxInput("FW", 
+                                        label = "Fresh water samples (FW)", 
+                                        value = TRUE, 
+                                        width = NULL
+                          ),
+                        ),
+                        fluidRow(
+                          checkboxInput("SW", 
+                                        label = "Salt water samples (SW)", 
+                                        value = TRUE, 
+                                        width = NULL
+                          )
+                        ),
+                        hr(),
+                        fluidRow(
+                          checkboxInput("sep", 
+                                        label = "Separate spectra", 
+                                        value = FALSE, 
+                                        width = NULL
+                          )
+                        )
+                 ),
+                 hr(),
+                 plotOutput(outputId = "plot.variants")
+        ), # end tabPanel
+        tabPanel("Compare two Spectra",
+                 column(6,
+                        h4("Select the first spectrum:"),
+                        selectInput("comp.polType1", 
+                                    label = "Select polymer type:", 
+                                    choices = levels(mydata$pol)[-12], 
+                                    selected = "PET"
+                        ),
+                        selectInput("comp.variant1", 
+                                    label = "Select Variant number (1 = pristine):", 
+                                    choices = c(1:max(mydata$v, na.rm = TRUE)), 
+                                    selected = "1"
+                        ),
+                        selectInput("comp.water1", 
+                                    label = "Select incubation water:", 
+                                    choices = levels(as.factor(mydata$incWater)), 
+                                    selected = "FW"
+                        )
+                 ),
+                 column(6,
+                        h4("Select the second spectrum:"),
+                        selectInput("comp.polType2", 
+                                    label = "Select polymer type:", 
+                                    choices = levels(mydata$pol)[-12], 
+                                    selected = "PET"
+                        ),
+                        selectInput("comp.variant2", 
+                                    label = "Select Variant number (1 = pristine):", 
+                                    choices = c(1:max(mydata$v, na.rm = TRUE)), 
+                                    selected = "2"
+                        ),
+                        selectInput("comp.water2", 
+                                    label = "Select incubation water:", 
+                                    choices = levels(as.factor(mydata$incWater)), 
+                                    selected = "FW"
+                        )
+                 ),
+                 hr(),
+                 plotOutput(outputId = "plot.comp")
+        ), # end tabPanel
+        tabPanel("Compare with own Spectrum",
+                 column(6,
+                        h4("Select spectrum to compare:"),
+                        selectInput("own.polType", 
+                                    label = "Select polymer type:", 
+                                    choices = levels(mydata$pol)[-12], 
+                                    selected = "PET"
+                        ),
+                        selectInput("own.variant", 
+                                    label = "Select Variant number (1 = pristine):", 
+                                    choices = c(1:max(mydata$v, na.rm = TRUE)), 
+                                    selected = "1"
+                        ),
+                        selectInput("own.water", 
+                                    label = "Select incubation water:", 
+                                    choices = levels(as.factor(mydata$incWater)), 
+                                    selected = "FW"
+                        )
+                 ),
+                 column(6,
+                        h4("Your own Spectrum"),
+                        textAreaInput("own.spec",
+                                      label = "Insert Vector of your spectrum:",
+                                      placeholder = "copy paste from excel file column..."
+                        )
+                 ),
+                 hr(),  
+                 plotOutput(outputId = "plot.own")
+        ) # end tabPanel
+      ) # end tabsetPanel
+    ) # end mainPanel
+  ) # end row
+) # end fluidPage ; end ui
+
+shinyApp(ui = ui, server = server)
