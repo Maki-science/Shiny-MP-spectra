@@ -1,6 +1,11 @@
-library(reshape2)
-library(ggplot2)
-library(shiny)
+# this is a fast and easy way to publish the app, but the user has to run it in his/her own R environment
+#install.packages("shiny")
+#require(shiny)
+#runGitHub( "Shiny-MP-spectra", "Maki-science")
+
+
+require(ggplot2)
+require(shiny)
 
 theme_set(theme( # Theme (Hintergrund, Textgröße, Text-Positionen und -Ausrichtung)
   axis.text.x = element_text(size=10, angle=0, vjust=0.0), 
@@ -30,27 +35,39 @@ str(mydata)
 mydata$polV <- as.factor(mydata$polV)
 mydata$pol <- as.factor(mydata$pol)
 mydata$incWater <- as.factor(mydata$incWater)
-
+mydata$incWater <- factor(mydata$incWater, levels = c("pristine", "FW", "SW"))
 
 
 # to provide easily understandable content for user, we need the full names of polymers
 polAbr <- levels(mydata$pol)
-polNames <- c("acrylnitrile-butadiene-styrole", "polyamide", "polycarbonate", "polyethylene", "polyethyleneterephthalate", "polyoxymethylene", "polypropylene", "polystyrene", "polyurethane", "polyvenylchlorite", "styrole-acrylnitrile")
+polNames <- c("ABS: acrylnitrile-butadiene-styrole" = "ABS", 
+              "PA: polyamide" = "PA", 
+              "PC: polycarbonate" = "PC", 
+              "PE: polyethylene" = "PE", 
+              "PET: polyethyleneterephthalate" = "PET", 
+              "POM: polyoxymethylene" = "POM", 
+              "PP: polypropylene" = "PP", 
+              "PS: polystyrene" = "PS", 
+              "PU: polyurethane" = "PU", 
+              "PVC: polyvenylchlorite" = "PVC", 
+              "SAN: styrole-acrylnitrile" = "SAN")
 
 waterAbr <- levels(mydata$incWater)
-waterNames <- c("freshwater", "saltwater")
+waterNames <- c("freshwater (FW)" = "FW", "seawater (SW)" = "SW")
 
 
 server <- function(input, output, session){
   
-  if (!interactive()) {
-    session$onSessionEnded(function() {
-      stopApp()
-      q("no")
-    })
-  }
+  # if (!interactive()) {
+  #   session$onSessionEnded(function() {
+  #     stopApp()
+  #     q("no")
+  #   })
+  # }
   
   ##### render plots #######
+  
+  #### plot variants #####
   # set which incubation water boxes are checked
   sFW <- ""
   sSW <- ""
@@ -64,8 +81,9 @@ server <- function(input, output, session){
     }
     temp <- droplevels(mydata[which(mydata$pol == input$polType & 
                                       mydata$v <= input$nV & 
-                                      (mydata$incWater == sFW |
-                                         mydata$incWater == sSW
+                                      (mydata$incWater == "pristine" |
+                                         mydata$incWater == sFW |
+                                         mydata$incWater == sSW 
                                       )
     )
     ,])
@@ -81,34 +99,36 @@ server <- function(input, output, session){
       }
     }
     
-    g <-  ggplot(temp, 
-                 aes(x = wavenumber, 
-                     y = amp, 
-                     group = interaction(factor(v), incWater, sep = " | "),
-                     colour = interaction(factor(v), incWater, sep = " | ")
-                 )
-    )+
-      geom_line()+
-      coord_cartesian(xlim = c(500.51919, 3681.31383))+
-      ylab("Intensity")+
-      scale_color_discrete(name = "Variant number | Incubation water")
+    ggplot(temp, 
+           aes(x = wavenumber, 
+               y = amp, 
+               group = interaction(factor(v), incWater, sep = " | "),
+               colour = interaction(factor(v), incWater, sep = " | ")
+              )
+           )+
+          geom_line()+
+          coord_cartesian(xlim = c(500.51919, 3681.31383))+
+          ylab("Raman-Intensity")+
+          xlab( expression(Wavenumber~cm^{-1}) )+
+          scale_color_discrete(name = "Variant number | Incubation water")+ 
+          theme(axis.text.y = element_blank(),
+                axis.ticks.y = element_blank())+
+          scale_x_continuous(breaks = scales::pretty_breaks(n = 20))
     
-    if(input$sep == TRUE){
-      g <- g + theme(axis.text.y = element_blank(),
-                     axis.ticks.y = element_blank())
-    }
-    
-    g
   }) # end render plot
   
-  
+  #### plot comparisons #####
   output$plot.comp <- renderPlot({
     temp <- droplevels(subset(mydata, (mydata$pol == input$comp.polType1 & 
                                          mydata$v == input$comp.variant1 & 
-                                         mydata$incWater == input$comp.water1) |
+                                         (mydata$incWater == input$comp.water1 |
+                                         mydata$incWater == "pristine")
+                                       ) |
                                 (mydata$pol == input$comp.polType2 & 
                                    mydata$v == input$comp.variant2 & 
-                                   mydata$incWater == input$comp.water2)
+                                   (mydata$incWater == input$comp.water2 |
+                                      mydata$incWater == "pristine")
+                                )
     )
     )
     #temp$col <- "blue"
@@ -123,18 +143,24 @@ server <- function(input, output, session){
     )+
       geom_line()+
       coord_cartesian(xlim = c(500.51919, 3681.31383))+
-      ylab("Intensity")+
-      scale_color_discrete(name = "Polymer | Variant number | Incubation water")
+      ylab("Raman-Intensity")+
+      xlab( expression(Wavenumber~cm^{-1}) )+ 
+      theme(axis.text.y = element_blank(),
+            axis.ticks.y = element_blank())+
+      scale_color_discrete(name = "Polymer | Variant number | Incubation water")+
+      scale_x_continuous(breaks = scales::pretty_breaks(n = 20))
   }) # end render plot
   
   
-  
+  #### plot own ######
   output$plot.own <- renderPlot({
     temp <- droplevels(subset(mydata, (mydata$pol == input$own.polType & 
                                          mydata$v == input$own.variant & 
-                                         mydata$incWater == input$own.water)
-    )
-    )
+                                         (mydata$incWater == input$own.water |
+                                            mydata$incWater == "pristine")
+                                          )
+                              )
+                        )
     own <- data.frame(wavenumber = temp$wavenumber,
                       amp = strsplit(input$own.spec, "\n")[[1]],
                       pol = "your polymer",
@@ -153,8 +179,12 @@ server <- function(input, output, session){
     )+
       geom_line()+
       coord_cartesian(xlim = c(500.51919, 3681.31383))+
-      ylab("Intensity")+
-      scale_color_discrete(name = "Polymer | Variant number | Incubation water")
+      ylab("Raman-Intensity")+
+      xlab( expression(Wavenumber~cm^{-1}) )+
+      theme(axis.text.y = element_blank(),
+            axis.ticks.y = element_blank())+
+      scale_color_discrete(name = "Polymer | Variant number | Incubation water")+
+      scale_x_continuous(breaks = scales::pretty_breaks(n = 20))
   }) # end render plot
   
 } # end server
@@ -171,7 +201,7 @@ ui <- fluidPage(
                  column(6,
                         selectInput("polType", 
                                     label = "Select polymer type:", 
-                                    choices = levels(mydata$pol)[-12], 
+                                    choices = polNames, 
                                     selected = "PET"
                         ),
                         sliderInput("nV", 
@@ -214,7 +244,7 @@ ui <- fluidPage(
                         h4("Select the first spectrum:"),
                         selectInput("comp.polType1", 
                                     label = "Select polymer type:", 
-                                    choices = levels(mydata$pol)[-12], 
+                                    choices = polNames, 
                                     selected = "PET"
                         ),
                         selectInput("comp.variant1", 
@@ -224,7 +254,7 @@ ui <- fluidPage(
                         ),
                         selectInput("comp.water1", 
                                     label = "Select incubation water:", 
-                                    choices = levels(as.factor(mydata$incWater)), 
+                                    choices = waterNames, 
                                     selected = "FW"
                         )
                  ),
@@ -232,7 +262,7 @@ ui <- fluidPage(
                         h4("Select the second spectrum:"),
                         selectInput("comp.polType2", 
                                     label = "Select polymer type:", 
-                                    choices = levels(mydata$pol)[-12], 
+                                    choices = polNames, 
                                     selected = "PET"
                         ),
                         selectInput("comp.variant2", 
@@ -242,7 +272,7 @@ ui <- fluidPage(
                         ),
                         selectInput("comp.water2", 
                                     label = "Select incubation water:", 
-                                    choices = levels(as.factor(mydata$incWater)), 
+                                    choices = waterNames, 
                                     selected = "FW"
                         )
                  ),
@@ -254,7 +284,7 @@ ui <- fluidPage(
                         h4("Select spectrum to compare:"),
                         selectInput("own.polType", 
                                     label = "Select polymer type:", 
-                                    choices = levels(mydata$pol)[-12], 
+                                    choices = polNames, 
                                     selected = "PET"
                         ),
                         selectInput("own.variant", 
