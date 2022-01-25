@@ -1,0 +1,4 @@
+cname	rmin	rmax
+carrotinoids	2600	2800
+fatty acids	800	900
+sterols	1300	1350

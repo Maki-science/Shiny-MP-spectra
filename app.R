@@ -3,9 +3,12 @@
 #require(shiny)
 #runGitHub( "Shiny-MP-spectra", "Maki-science")
 
-
+# for rective plot content I followed https://stackoverflow.com/questions/42104031/shiny-interactive-ggplot-with-vertical-line-and-data-labels-at-mouse-hover-poin
 require(ggplot2)
 require(shiny)
+library(tidyr)
+library(dplyr)
+library(shinySignals)
 
 theme_set(theme( # Theme (Hintergrund, Textgröße, Text-Positionen und -Ausrichtung)
   axis.text.x = element_text(size=10, angle=0, vjust=0.0), 
@@ -18,7 +21,6 @@ theme_set(theme( # Theme (Hintergrund, Textgröße, Text-Positionen und -Ausrich
   panel.border = element_blank()
 )
 )
-
 
 
 #setwd("//btb1r2.bio.uni-bayreuth.de/home/PhD/Paper/Eigene/Vinay/")
@@ -55,15 +57,56 @@ polNames <- c("ABS: acrylnitrile-butadiene-styrole" = "ABS",
 waterAbr <- levels(mydata$incWater)
 waterNames <- c("freshwater (FW)" = "FW", "seawater (SW)" = "SW")
 
+# to provide further information about functional groups, we read another table with those information
+components <- read.table(
+                          file = "components.txt",
+                          sep = "\t",
+                          dec = ".",
+                          header = TRUE
+                        )
+
 
 server <- function(input, output, session){
   
-  # if (!interactive()) {
-  #   session$onSessionEnded(function() {
-  #     stopApp()
-  #     q("no")
-  #   })
-  # }
+  if (!interactive()) {
+    session$onSessionEnded(function() {
+      stopApp()
+      q("no")
+    })
+  }
+  
+  
+  # use reactive values for mouse position in plot
+  values <- reactiveValues(loc = 0, component = "", hjust = -0.1, locy = 0)
+  
+  observeEvent(input$plot_hover$x, {
+    values$loc <- input$plot_hover$x
+    
+    # check current wavenumber and whether there is a known component at this point
+    for(i in 1:nrow(components)){
+      if(values$loc <= components$rmax[i] && values$loc >= components$rmin[i]){
+        values$component <- paste(round(values$loc), components$cname[i], sep = ", ")
+        break()
+      }
+      else{
+        values$component <- ""
+      }
+    }
+    
+    # Check whether position is too far on the right side, to print the component label
+    # on the left side of the vline. Otherwise it gets lost at the borders of the plot
+    if(values$loc >= 3000){
+      values$hjust = 1.1
+    }
+    else{
+      values$hjust = -0.1
+    }
+    
+  })
+  # if you want to reset the initial position of the vertical line when input$points changes
+  observeEvent(input$plot_hover$y, {
+    values$locy <- input$plot_hover$y
+  })
   
   ##### render plots #######
   
@@ -88,6 +131,12 @@ server <- function(input, output, session){
     )
     ,])
     
+    # reorder polV as the order of the plot is confusing otherwise
+    newOrder <- c(levels(droplevels(temp[grep("pristine", temp$polV),])$polV))
+    newOrder <- c(newOrder, levels(droplevels(temp[grep("FW", temp$polV),])$polV))
+    newOrder <- c(newOrder, levels(droplevels(temp[grep("SW", temp$polV),])$polV))
+    temp$polV <- factor(temp$polV, levels = newOrder)
+
     # if input$sep == TRUE, multiply values of each spectrum with a certain number, to split them along y-axis
     if(input$sep == TRUE){
       for(i in 1:length(levels(temp$polV))){
@@ -98,12 +147,14 @@ server <- function(input, output, session){
         }
       }
     }
+    temp$v <- as.factor(temp$v)
     
-    ggplot(temp, 
+    
+    g <- ggplot(temp, 
            aes(x = wavenumber, 
                y = amp, 
-               group = interaction(factor(v), incWater, sep = " | "),
-               colour = interaction(factor(v), incWater, sep = " | ")
+               group = interaction(incWater, v, sep = " | "),
+               colour = interaction(incWater, v, sep = " | ")
               )
            )+
           geom_line()+
@@ -114,6 +165,21 @@ server <- function(input, output, session){
           theme(axis.text.y = element_blank(),
                 axis.ticks.y = element_blank())+
           scale_x_continuous(breaks = scales::pretty_breaks(n = 20))
+    if(values$loc > 400 && values$loc < 3700 && values$locy < max(temp$amp) && values$locy > 0){
+          # reactive vertical line and text
+          g <- g+ geom_vline(aes(xintercept = values$loc), linetype = "dotted")+
+                  geom_text(aes(x = values$loc,
+                        y = max(amp),
+                        label = values$component,
+                        vjust = 0,
+                        hjust = values$hjust
+                        ),
+                    size=4,
+                    show.legend = FALSE,
+                    colour = "black"
+                    )
+    }
+  g
     
   }) # end render plot
   
@@ -134,7 +200,7 @@ server <- function(input, output, session){
     #temp$col <- "blue"
     #temp$col[which(temp$pol == input$comp.polType2 && temp$v == input$comp.variant2 && temp$incWater == input$comp.water2)] <- "red"
     
-    ggplot(temp, 
+    g <- ggplot(temp, 
            aes(x = wavenumber, 
                y = amp, 
                group = interaction(pol, factor(v), incWater, sep = " | "),
@@ -149,6 +215,22 @@ server <- function(input, output, session){
             axis.ticks.y = element_blank())+
       scale_color_discrete(name = "Polymer | Variant number | Incubation water")+
       scale_x_continuous(breaks = scales::pretty_breaks(n = 20))
+      # reactive vertical line and text
+      if(values$loc > 400 && values$loc < 3700 && values$locy < max(temp$amp) && values$locy > 0){
+        # reactive vertical line and text
+        g <- g+ geom_vline(aes(xintercept = values$loc), linetype = "dotted")+
+          geom_text(aes(x = values$loc,
+                        y = max(amp),
+                        label = values$component,
+                        vjust = 0,
+                        hjust = values$hjust
+          ),
+          size=4,
+          show.legend = FALSE,
+          colour = "black"
+          )
+      }
+    g
   }) # end render plot
   
   
@@ -170,7 +252,7 @@ server <- function(input, output, session){
     )
     temp <- rbind(temp, own)
     temp$amp <- as.numeric(temp$amp)
-    ggplot(temp, 
+    g <- ggplot(temp, 
            aes(x = wavenumber, 
                y = amp, 
                group = interaction(pol, factor(v), incWater, sep = " | "),
@@ -185,6 +267,21 @@ server <- function(input, output, session){
             axis.ticks.y = element_blank())+
       scale_color_discrete(name = "Polymer | Variant number | Incubation water")+
       scale_x_continuous(breaks = scales::pretty_breaks(n = 20))
+      if(values$loc > 400 && values$loc < 3700 && values$locy < max(temp$amp) && values$locy > 0){
+        # reactive vertical line and text
+        g <- g+ geom_vline(aes(xintercept = values$loc), linetype = "dotted")+
+          geom_text(aes(x = values$loc,
+                        y = max(amp),
+                        label = values$component,
+                        vjust = 0,
+                        hjust = values$hjust
+          ),
+          size=4,
+          show.legend = FALSE,
+          colour = "black"
+          )
+      }
+    g
   }) # end render plot
   
 } # end server
@@ -194,10 +291,10 @@ server <- function(input, output, session){
 #### ui #####
 ui <- fluidPage(
   fluidRow(
-    titlePanel("Shiny Raman-MP Spectra"),
+    titlePanel(h2("Shiny Raman-MP Spectra")),
     mainPanel(
       tabsetPanel(
-        tabPanel("Show available Spectra",
+        tabPanel("Show Variants",
                  column(6,
                         selectInput("polType", 
                                     label = "Select polymer type:", 
@@ -222,7 +319,7 @@ ui <- fluidPage(
                         ),
                         fluidRow(
                           checkboxInput("SW", 
-                                        label = "Salt water samples (SW)", 
+                                        label = "Sea water samples (SW)", 
                                         value = TRUE, 
                                         width = NULL
                           )
@@ -237,7 +334,12 @@ ui <- fluidPage(
                         )
                  ),
                  hr(),
-                 plotOutput(outputId = "plot.variants")
+                 plotOutput(outputId = "plot.variants",
+                            hover = hoverOpts(id = "plot_hover",
+                                              delay = 50,
+                                              delayType = "debounce"
+                                              )
+                            )
         ), # end tabPanel
         tabPanel("Compare two Spectra",
                  column(6,
@@ -277,7 +379,11 @@ ui <- fluidPage(
                         )
                  ),
                  hr(),
-                 plotOutput(outputId = "plot.comp")
+                 plotOutput(outputId = "plot.comp",
+                            hover = hoverOpts(id = "plot_hover",
+                                              delay = 50,
+                                              delayType = "debounce"
+                            ))
         ), # end tabPanel
         tabPanel("Compare with own Spectrum",
                  column(6,
@@ -306,7 +412,11 @@ ui <- fluidPage(
                         )
                  ),
                  hr(),  
-                 plotOutput(outputId = "plot.own")
+                 plotOutput(outputId = "plot.own",
+                            hover = hoverOpts(id = "plot_hover",
+                                              delay = 50,
+                                              delayType = "debounce"
+                            ))
         ) # end tabPanel
       ) # end tabsetPanel
     ) # end mainPanel
