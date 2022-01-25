@@ -243,8 +243,34 @@ server <- function(input, output, session){
                                           )
                               )
                         )
+    
+    # check whether user input has same length as our spectra
+    # otherwise stretch/dampen data accordingly
+    od <- strsplit(input$own.spec, "\n")[[1]]
+    
+    if(length(od) != length(temp$wavenumber)){
+      # if users resolution is higher, delete points evenly distributed
+      if(length(od) > length(temp$wavenumber)){
+        
+        exod <- round(seq(length.out = (length(od) / length(temp$wavenumber) * 1600 -1600), 
+                             from = 1, 
+                             to = length(od)
+                             )
+                         )
+        od <- od[-exod]
+        
+      }
+      # if users resolution is lower, insert NAs at evenly distributed points
+      else{
+        seqin <- round(seq(length.out = length(temp$wavenumber) %% length(od), from = 1, to = 1600))
+        for(i in 1:length(seqin)){
+          od <- append(od, "NA", after = seqin[i])
+        }
+      }
+    }
+
     own <- data.frame(wavenumber = temp$wavenumber,
-                      amp = strsplit(input$own.spec, "\n")[[1]],
+                      amp = od,
                       pol = "your polymer",
                       polV = "your.V1",
                       v = 1,
