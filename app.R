@@ -6,9 +6,9 @@
 # for rective plot content I followed https://stackoverflow.com/questions/42104031/shiny-interactive-ggplot-with-vertical-line-and-data-labels-at-mouse-hover-poin
 require(ggplot2)
 require(shiny)
-library(tidyr)
-library(dplyr)
-library(shinySignals)
+require(tidyr)
+require(dplyr)
+require(shinySignals)
 
 theme_set(theme( # Theme (Hintergrund, Textgröße, Text-Positionen und -Ausrichtung)
   axis.text.x = element_text(size=10, angle=0, vjust=0.0), 
@@ -33,7 +33,7 @@ mydata <- read.table(
   sep = ";",
   dec = "."
 )
-str(mydata)
+
 mydata$polV <- as.factor(mydata$polV)
 mydata$pol <- as.factor(mydata$pol)
 mydata$incWater <- as.factor(mydata$incWater)
@@ -244,27 +244,32 @@ server <- function(input, output, session){
                               )
                         )
     
-    # check whether user input has same length as our spectra
-    # otherwise stretch/dampen data accordingly
-    od <- strsplit(input$own.spec, "\n")[[1]]
-    
-    if(length(od) != length(temp$wavenumber)){
-      # if users resolution is higher, delete points evenly distributed
-      if(length(od) > length(temp$wavenumber)){
-        
-        exod <- round(seq(length.out = (length(od) / length(temp$wavenumber) * 1600 -1600), 
-                             from = 1, 
-                             to = length(od)
-                             )
-                         )
-        od <- od[-exod]
-        
-      }
-      # if users resolution is lower, insert NAs at evenly distributed points
-      else{
-        seqin <- round(seq(length.out = length(temp$wavenumber) %% length(od), from = 1, to = 1600))
-        for(i in 1:length(seqin)){
-          od <- append(od, "NA", after = seqin[i])
+    if(input$own.spec == ""){
+      od <- rep("NA", 1600)
+    }
+    else{
+      # check whether user input has same length as our spectra
+      # otherwise stretch/dampen data accordingly
+      od <- strsplit(input$own.spec, "\n")[[1]]
+      
+      if(length(od) != length(temp$wavenumber)){
+        # if users resolution is higher, delete points evenly distributed
+        if(length(od) > length(temp$wavenumber)){
+          
+          exod <- round(seq(length.out = (length(od) / length(temp$wavenumber) * 1600 -1600), 
+                               from = 1, 
+                               to = length(od)
+                               )
+                           )
+          od <- od[-exod]
+          
+        }
+        # if users resolution is lower, insert NAs at evenly distributed points
+        else{
+          seqin <- round(seq(length.out = length(temp$wavenumber) %% length(od), from = 1, to = 1600))
+          for(i in 1:length(seqin)){
+            od <- append(od, "NA", after = seqin[i])
+          }
         }
       }
     }
@@ -274,7 +279,7 @@ server <- function(input, output, session){
                       pol = "your polymer",
                       polV = "your.V1",
                       v = 1,
-                      incWater = " "
+                      incWater = "n.a."
     )
     temp <- rbind(temp, own)
     temp$amp <- as.numeric(temp$amp)
@@ -426,16 +431,17 @@ ui <- fluidPage(
                         ),
                         selectInput("own.water", 
                                     label = "Select incubation water:", 
-                                    choices = levels(as.factor(mydata$incWater)), 
+                                    choices = c("fresh water", "sea water"), 
                                     selected = "FW"
                         )
                  ),
                  column(6,
                         h4("Your own Spectrum"),
                         textAreaInput("own.spec",
-                                      label = "Insert Vector of your spectrum:",
-                                      placeholder = "copy paste from excel file column..."
-                        )
+                                    label = "Insert Vector of your spectrum:",
+                                    placeholder = "copy and paste from excel file column..."
+                        ),
+                        "note: if your resolution is higher/lower, your spectrum will be compressed/streched accordingly"
                  ),
                  hr(),  
                  plotOutput(outputId = "plot.own",
