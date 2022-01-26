@@ -243,7 +243,6 @@ server <- function(input, output, session){
                                           )
                               )
                         )
-    
     if(input$own.spec == ""){
       od <- rep("NA", 1600)
     }
@@ -251,18 +250,18 @@ server <- function(input, output, session){
       # check whether user input has same length as our spectra
       # otherwise stretch/dampen data accordingly
       od <- strsplit(input$own.spec, "\n")[[1]]
-      
+
       if(length(od) != length(temp$wavenumber)){
         # if users resolution is higher, delete points evenly distributed
         if(length(od) > length(temp$wavenumber)){
-          
-          exod <- round(seq(length.out = (length(od) / length(temp$wavenumber) * 1600 -1600), 
-                               from = 1, 
+
+          exod <- round(seq(length.out = (length(od) / length(temp$wavenumber) * 1600 -1600),
+                               from = 1,
                                to = length(od)
                                )
                            )
           od <- od[-exod]
-          
+
         }
         # if users resolution is lower, insert NAs at evenly distributed points
         else{
@@ -298,11 +297,11 @@ server <- function(input, output, session){
             axis.ticks.y = element_blank())+
       scale_color_discrete(name = "Polymer | Variant number | Incubation water")+
       scale_x_continuous(breaks = scales::pretty_breaks(n = 20))
-      if(values$loc > 400 && values$loc < 3700 && values$locy < max(temp$amp) && values$locy > 0){
+      if(values$loc > 400 && values$loc < 3700 && values$locy < max(temp$amp, na.rm = TRUE) && values$locy > 0){
         # reactive vertical line and text
         g <- g+ geom_vline(aes(xintercept = values$loc), linetype = "dotted")+
           geom_text(aes(x = values$loc,
-                        y = max(amp),
+                        y = max(amp, na.rm = TRUE),
                         label = values$component,
                         vjust = 0,
                         hjust = values$hjust
@@ -431,7 +430,7 @@ ui <- fluidPage(
                         ),
                         selectInput("own.water", 
                                     label = "Select incubation water:", 
-                                    choices = c("fresh water", "sea water"), 
+                                    choices = c("fresh water" = "FW", "sea water" = "SW"), 
                                     selected = "FW"
                         )
                  ),
