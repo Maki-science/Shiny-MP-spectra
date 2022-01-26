@@ -6,9 +6,9 @@
 # for rective plot content I followed https://stackoverflow.com/questions/42104031/shiny-interactive-ggplot-with-vertical-line-and-data-labels-at-mouse-hover-poin
 require(ggplot2)
 require(shiny)
-require(tidyr)
-require(dplyr)
-require(shinySignals)
+#require(tidyr)
+#require(dplyr)
+#require(shinySignals)
 
 theme_set(theme( # Theme (Hintergrund, Textgröße, Text-Positionen und -Ausrichtung)
   axis.text.x = element_text(size=10, angle=0, vjust=0.0), 
