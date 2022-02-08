@@ -391,7 +391,9 @@ server <- function(input, output, session){
 #### ui #####
 ui <- fluidPage(
   fluidRow(
-    titlePanel(h2("Shiny Raman-MP Spectra")),
+    titlePanel(
+              h1("Shiny Raman-MP Spectra", align = "center")
+               ),
     mainPanel(
       tabsetPanel(
         ##### ui variants #####
@@ -530,10 +532,20 @@ ui <- fluidPage(
         ) # end tabPanel
       ) # end tabsetPanel
     ) # end mainPanel
-  ) # end row
-  # fluidRow(
-  #   column(12, "Find the corresponding publication to this app at <a href='maki-science.org'> this link </a>.")
-  # )
+  ), # end row
+  fluidRow(
+    tags$footer("Find the corresponding publication to this app at ", tags$a(href="http://www.maki-science.org", "Maki-Science", target="_blank"),
+                align = "center", 
+                style = "
+                  position:absolute;
+                  bottom:0;
+                  width:100%;
+                  color: white;
+                  padding: 10px;
+                  background-color: lightgrey;
+                  z-index: 1000;"
+                )
+  )
 ) # end fluidPage ; end ui
 
 shinyApp(ui = ui, server = server)
