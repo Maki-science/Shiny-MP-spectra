@@ -394,7 +394,7 @@ ui <- fluidPage(
     titlePanel(
               h1("Shiny Raman-MP Spectra", align = "center")
                ),
-    mainPanel(
+    mainPanel(align = "center", width = 12,
       tabsetPanel(
         ##### ui variants #####
         tabPanel("Show Variants",
@@ -534,10 +534,10 @@ ui <- fluidPage(
     ) # end mainPanel
   ), # end row
   fluidRow(
-    tags$footer("Find the corresponding publication to this app at ", tags$a(href="http://www.maki-science.org", "Maki-Science", target="_blank"),
+    tags$footer("Find the corresponding publication to this app at ", tags$a(href="http://www.maki-science.org", "(to be changed)", target="_blank"),
                 align = "center", 
                 style = "
-                  position:absolute;
+                  position: absolute;
                   bottom:0;
                   width:100%;
                   color: white;
