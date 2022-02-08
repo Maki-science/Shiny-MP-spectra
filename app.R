@@ -6,9 +6,6 @@
 # for rective plot content I followed https://stackoverflow.com/questions/42104031/shiny-interactive-ggplot-with-vertical-line-and-data-labels-at-mouse-hover-poin
 require(ggplot2)
 require(shiny)
-#require(tidyr)
-#require(dplyr)
-#require(shinySignals)
 
 theme_set(theme( # Theme (Hintergrund, Textgröße, Text-Positionen und -Ausrichtung)
   axis.text.x = element_text(size=10, angle=0, vjust=0.0), 
@@ -23,11 +20,8 @@ theme_set(theme( # Theme (Hintergrund, Textgröße, Text-Positionen und -Ausrich
 )
 
 
-#setwd("//btb1r2.bio.uni-bayreuth.de/home/PhD/Paper/Eigene/Vinay/")
-#setwd("C:/Users/marvi/Desktop/")
-
-# read in prepared data again. 
-# this is just done to skip the time consuming step of preparing the data, when compiling the app
+# read in prepared data 
+# this is just done to skip the time consuming step of preparing the data
 mydata <- read.table(
   file = "prep_data.txt", 
   sep = ";",
@@ -51,13 +45,13 @@ polNames <- c("ABS: acrylnitrile-butadiene-styrole" = "ABS",
               "PP: polypropylene" = "PP", 
               "PS: polystyrene" = "PS", 
               "PU: polyurethane" = "PU", 
-              "PVC: polyvenylchlorite" = "PVC", 
+              "PVC: polyvinyl-chloride" = "PVC", 
               "SAN: styrole-acrylnitrile" = "SAN")
 
 waterAbr <- levels(mydata$incWater)
 waterNames <- c("freshwater (FW)" = "FW", "seawater (SW)" = "SW")
 
-# to provide further information about functional groups, we read another table with those information
+# to provide further information about substance classes, we read another table with those information
 components <- read.table(
                           file = "components.txt",
                           sep = "\t",
@@ -76,7 +70,7 @@ server <- function(input, output, session){
   }
   
   
-  # use reactive values for mouse position in plot
+  ##### use reactive values for mouse position in plot #####
   values <- reactiveValues(loc = 0, component = "", hjust = -0.1, locy = 0)
   
   observeEvent(input$plot_hover$x, {
@@ -108,35 +102,53 @@ server <- function(input, output, session){
     values$locy <- input$plot_hover$y
   })
   
-  ##### render plots #######
+  ### reactive value for plot-data management for variants####
+  # Therefore, the data for the plots don't have to be loaded and processed every time, the 
+  # hover function is triggered for the meta data view
+  # This improves processing time and therefore user experience
+  plotData <- reactiveValues(temp = data.frame(), sSW = "", sFW = "")
   
-  #### plot variants #####
-  # set which incubation water boxes are checked
-  sFW <- ""
-  sSW <- ""
-  
-  output$plot.variants <- renderPlot({
+  observeEvent(c(input$polType, input$nV, input$FW, input$SW), {
+    # first not use the reactive value for calculation, because accessing this object
+    # needs significantly more computation time
+    # therefore do processing first and then insert into reactive value
     if(input$SW == TRUE){
       sSW <- "SW"
+    }
+    else{
+      sSW <- ""
     }
     if(input$FW == TRUE){
       sFW <- "FW"
     }
+    else{
+      sFW <- ""
+    }
+    
     temp <- droplevels(mydata[which(mydata$pol == input$polType & 
                                       mydata$v <= input$nV & 
                                       (mydata$incWater == "pristine" |
                                          mydata$incWater == sFW |
                                          mydata$incWater == sSW 
                                       )
-    )
-    ,])
+                                      ),]
+                                )
     
     # reorder polV as the order of the plot is confusing otherwise
     newOrder <- c(levels(droplevels(temp[grep("pristine", temp$polV),])$polV))
     newOrder <- c(newOrder, levels(droplevels(temp[grep("FW", temp$polV),])$polV))
     newOrder <- c(newOrder, levels(droplevels(temp[grep("SW", temp$polV),])$polV))
     temp$polV <- factor(temp$polV, levels = newOrder)
-
+    
+    temp$v <- as.factor(temp$v)
+    # insert processed data into reactive value
+    plotData$temp <- temp
+  })
+  # separate the response of sep, because this is computationally intense
+  observeEvent(input$sep, {
+    
+    temp <- plotData$temp
+  
     # if input$sep == TRUE, multiply values of each spectrum with a certain number, to split them along y-axis
     if(input$sep == TRUE){
       for(i in 1:length(levels(temp$polV))){
@@ -147,10 +159,127 @@ server <- function(input, output, session){
         }
       }
     }
-    temp$v <- as.factor(temp$v)
+
+    plotData$temp <- temp
     
+  })
+  
+  
+  
+  ### reactive value for plot-data management for comparison ####
+  # Therefore, the data for the plots don't have to be loaded and processed every time, the 
+  # hover function is triggered for the meta data view
+  plotData.comp <- reactiveValues(temp = data.frame())
+  
+  observeEvent(c(input$comp.polType1, input$comp.polType2, input$comp.variant1, input$comp.variant2, input$comp.water1, input$comp.water2), {
+    # first not use the reactive value for calculation, because accessing this object
+    # needs significantly more computation time
+    # therefore do processing first and then insert into reactive value
+
+    temp <- droplevels(subset(mydata, (mydata$pol == input$comp.polType1 & 
+                                         mydata$v == input$comp.variant1 & 
+                                         (mydata$incWater == input$comp.water1 |
+                                            mydata$incWater == "pristine")
+                                        ) |
+                                        (mydata$pol == input$comp.polType2 & 
+                                           mydata$v == input$comp.variant2 & 
+                                           (mydata$incWater == input$comp.water2 |
+                                              mydata$incWater == "pristine")
+                                        )
+                              )
+                      )
     
-    g <- ggplot(temp, 
+    # # reorder polV as the order of the plot is confusing otherwise
+    # newOrder <- c(levels(droplevels(temp[grep("pristine", temp$polV),])$polV))
+    # newOrder <- c(newOrder, levels(droplevels(temp[grep("FW", temp$polV),])$polV))
+    # newOrder <- c(newOrder, levels(droplevels(temp[grep("SW", temp$polV),])$polV))
+    # temp$polV <- factor(temp$polV, levels = newOrder)
+    # 
+    # temp$v <- as.factor(temp$v)
+    # insert processed data into reactive value
+    plotData.comp$temp <- temp
+  })
+
+  
+  ### reactive value for plot-data management for comparison ####
+  # Therefore, the data for the plots don't have to be loaded and processed every time, the 
+  # hover function is triggered for the meta data view
+  plotData.own <- reactiveValues(temp = data.frame())
+  
+  observeEvent(c(input$own.polType, input$own.variant, input$own.water, input$own.spec), {
+    # first not use the reactive value for calculation, because accessing this object
+    # needs significantly more computation time
+    # therefore do processing first and then insert into reactive value
+    
+    temp <- droplevels(subset(mydata, (mydata$pol == input$own.polType & 
+                                         mydata$v == input$own.variant & 
+                                         (mydata$incWater == input$own.water |
+                                            mydata$incWater == "pristine")
+                                      )
+                              )
+                      )
+    # check whether own spectrum is provided (already)
+    if(input$own.spec == ""){ # if not, insert NAs
+      od <- rep("NA", 1600)
+    }
+    else{ # if yes, process them
+      # check whether user input has same length as our spectra
+      # otherwise stretch/dampen data accordingly
+      od <- strsplit(input$own.spec, "\n")[[1]]
+      
+      if(length(od) != length(temp$wavenumber)){
+        # if users resolution is higher, delete points evenly distributed
+        if(length(od) > length(temp$wavenumber)){
+          
+          exod <- round(seq(length.out = (length(od) / length(temp$wavenumber) * 1600 -1600),
+                            from = 1,
+                            to = length(od)
+          )
+          )
+          od <- od[-exod]
+          
+        }
+        # if users resolution is lower, insert NAs at evenly distributed points
+        else{
+          seqin <- round(seq(length.out = length(temp$wavenumber) %% length(od), from = 1, to = 1600))
+          for(i in 1:length(seqin)){
+            od <- append(od, "NA", after = seqin[i])
+          }
+        }
+      }
+    }
+    
+    own <- data.frame(wavenumber = temp$wavenumber,
+                      amp = od,
+                      pol = "your polymer",
+                      polV = "your.V1",
+                      v = 1,
+                      incWater = "n.a."
+    )
+    temp <- rbind(temp, own)
+    temp$amp <- as.numeric(temp$amp)
+    
+    # # reorder polV as the order of the plot is confusing otherwise
+    # newOrder <- c(levels(droplevels(temp[grep("pristine", temp$polV),])$polV))
+    # newOrder <- c(newOrder, levels(droplevels(temp[grep("FW", temp$polV),])$polV))
+    # newOrder <- c(newOrder, levels(droplevels(temp[grep("SW", temp$polV),])$polV))
+    # temp$polV <- factor(temp$polV, levels = newOrder)
+    # 
+    # temp$v <- as.factor(temp$v)
+    # insert processed data into reactive value
+    plotData.own$temp <- temp
+  })
+  
+  
+  
+  
+  ##### render plots #######
+  
+  #### plot variants #####
+
+  output$plot.variants <- renderPlot({
+    
+    g <- ggplot(plotData$temp, 
            aes(x = wavenumber, 
                y = amp, 
                group = interaction(incWater, v, sep = " | "),
@@ -165,7 +294,7 @@ server <- function(input, output, session){
           theme(axis.text.y = element_blank(),
                 axis.ticks.y = element_blank())+
           scale_x_continuous(breaks = scales::pretty_breaks(n = 20))
-    if(values$loc > 400 && values$loc < 3700 && values$locy < max(temp$amp) && values$locy > 0){
+    if(values$loc > 400 && values$loc < 3700 && values$locy < max(plotData$temp$amp) && values$locy > 0){
           # reactive vertical line and text
           g <- g+ geom_vline(aes(xintercept = values$loc), linetype = "dotted")+
                   geom_text(aes(x = values$loc,
@@ -185,22 +314,8 @@ server <- function(input, output, session){
   
   #### plot comparisons #####
   output$plot.comp <- renderPlot({
-    temp <- droplevels(subset(mydata, (mydata$pol == input$comp.polType1 & 
-                                         mydata$v == input$comp.variant1 & 
-                                         (mydata$incWater == input$comp.water1 |
-                                         mydata$incWater == "pristine")
-                                       ) |
-                                (mydata$pol == input$comp.polType2 & 
-                                   mydata$v == input$comp.variant2 & 
-                                   (mydata$incWater == input$comp.water2 |
-                                      mydata$incWater == "pristine")
-                                )
-    )
-    )
-    #temp$col <- "blue"
-    #temp$col[which(temp$pol == input$comp.polType2 && temp$v == input$comp.variant2 && temp$incWater == input$comp.water2)] <- "red"
-    
-    g <- ggplot(temp, 
+
+    g <- ggplot(plotData.comp$temp, 
            aes(x = wavenumber, 
                y = amp, 
                group = interaction(pol, factor(v), incWater, sep = " | "),
@@ -216,7 +331,7 @@ server <- function(input, output, session){
       scale_color_discrete(name = "Polymer | Variant number | Incubation water")+
       scale_x_continuous(breaks = scales::pretty_breaks(n = 20))
       # reactive vertical line and text
-      if(values$loc > 400 && values$loc < 3700 && values$locy < max(temp$amp) && values$locy > 0){
+      if(values$loc > 400 && values$loc < 3700 && values$locy < max(plotData.comp$temp$amp) && values$locy > 0){
         # reactive vertical line and text
         g <- g+ geom_vline(aes(xintercept = values$loc), linetype = "dotted")+
           geom_text(aes(x = values$loc,
@@ -236,53 +351,8 @@ server <- function(input, output, session){
   
   #### plot own ######
   output$plot.own <- renderPlot({
-    temp <- droplevels(subset(mydata, (mydata$pol == input$own.polType & 
-                                         mydata$v == input$own.variant & 
-                                         (mydata$incWater == input$own.water |
-                                            mydata$incWater == "pristine")
-                                          )
-                              )
-                        )
-    if(input$own.spec == ""){
-      od <- rep("NA", 1600)
-    }
-    else{
-      # check whether user input has same length as our spectra
-      # otherwise stretch/dampen data accordingly
-      od <- strsplit(input$own.spec, "\n")[[1]]
-
-      if(length(od) != length(temp$wavenumber)){
-        # if users resolution is higher, delete points evenly distributed
-        if(length(od) > length(temp$wavenumber)){
-
-          exod <- round(seq(length.out = (length(od) / length(temp$wavenumber) * 1600 -1600),
-                               from = 1,
-                               to = length(od)
-                               )
-                           )
-          od <- od[-exod]
-
-        }
-        # if users resolution is lower, insert NAs at evenly distributed points
-        else{
-          seqin <- round(seq(length.out = length(temp$wavenumber) %% length(od), from = 1, to = 1600))
-          for(i in 1:length(seqin)){
-            od <- append(od, "NA", after = seqin[i])
-          }
-        }
-      }
-    }
-
-    own <- data.frame(wavenumber = temp$wavenumber,
-                      amp = od,
-                      pol = "your polymer",
-                      polV = "your.V1",
-                      v = 1,
-                      incWater = "n.a."
-    )
-    temp <- rbind(temp, own)
-    temp$amp <- as.numeric(temp$amp)
-    g <- ggplot(temp, 
+    
+    g <- ggplot(plotData.own$temp, 
            aes(x = wavenumber, 
                y = amp, 
                group = interaction(pol, factor(v), incWater, sep = " | "),
@@ -297,7 +367,7 @@ server <- function(input, output, session){
             axis.ticks.y = element_blank())+
       scale_color_discrete(name = "Polymer | Variant number | Incubation water")+
       scale_x_continuous(breaks = scales::pretty_breaks(n = 20))
-      if(values$loc > 400 && values$loc < 3700 && values$locy < max(temp$amp, na.rm = TRUE) && values$locy > 0){
+      if(values$loc > 400 && values$loc < 3700 && values$locy < max(plotData.own$temp$amp, na.rm = TRUE) && values$locy > 0){
         # reactive vertical line and text
         g <- g+ geom_vline(aes(xintercept = values$loc), linetype = "dotted")+
           geom_text(aes(x = values$loc,
@@ -324,6 +394,7 @@ ui <- fluidPage(
     titlePanel(h2("Shiny Raman-MP Spectra")),
     mainPanel(
       tabsetPanel(
+        ##### ui variants #####
         tabPanel("Show Variants",
                  column(6,
                         selectInput("polType", 
@@ -364,13 +435,16 @@ ui <- fluidPage(
                         )
                  ),
                  hr(),
+                 hr(),
+                 column(12, "Move your mouse over the graph to view meta data."),
                  plotOutput(outputId = "plot.variants",
                             hover = hoverOpts(id = "plot_hover",
-                                              delay = 50,
+                                              delay = 40,
                                               delayType = "debounce"
                                               )
                             )
         ), # end tabPanel
+        ##### ui compare #####
         tabPanel("Compare two Spectra",
                  column(6,
                         h4("Select the first spectrum:"),
@@ -409,12 +483,15 @@ ui <- fluidPage(
                         )
                  ),
                  hr(),
+                 hr(),
+                 column(12, "Move your mouse over the graph to view meta data."),
                  plotOutput(outputId = "plot.comp",
                             hover = hoverOpts(id = "plot_hover",
-                                              delay = 50,
+                                              delay = 40,
                                               delayType = "debounce"
                             ))
         ), # end tabPanel
+        ##### ui own #####
         tabPanel("Compare with own Spectrum",
                  column(6,
                         h4("Select spectrum to compare:"),
@@ -442,16 +519,21 @@ ui <- fluidPage(
                         ),
                         "note: if your resolution is higher/lower, your spectrum will be compressed/streched accordingly"
                  ),
-                 hr(),  
+                 hr(),
+                 hr(),
+                 column(12, "Move your mouse over the graph to view meta data."),
                  plotOutput(outputId = "plot.own",
                             hover = hoverOpts(id = "plot_hover",
-                                              delay = 50,
+                                              delay = 40,
                                               delayType = "debounce"
                             ))
         ) # end tabPanel
       ) # end tabsetPanel
     ) # end mainPanel
   ) # end row
+  # fluidRow(
+  #   column(12, "Find the corresponding publication to this app at <a href='maki-science.org'> this link </a>.")
+  # )
 ) # end fluidPage ; end ui
 
 shinyApp(ui = ui, server = server)
