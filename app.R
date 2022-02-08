@@ -437,7 +437,7 @@ ui <- fluidPage(
                         )
                  ),
                  hr(),
-                 hr(),
+                 column(12, "Press 'ctrl' & '-' or '+' to adjust the object sizes if necessary."),
                  column(12, "Move your mouse over the graph to view meta data."),
                  plotOutput(outputId = "plot.variants",
                             hover = hoverOpts(id = "plot_hover",
@@ -485,7 +485,7 @@ ui <- fluidPage(
                         )
                  ),
                  hr(),
-                 hr(),
+                 column(12, "Press 'ctrl' & '-' or '+' to adjust the object sizes if necessary."),
                  column(12, "Move your mouse over the graph to view meta data."),
                  plotOutput(outputId = "plot.comp",
                             hover = hoverOpts(id = "plot_hover",
@@ -522,7 +522,7 @@ ui <- fluidPage(
                         "note: if your resolution is higher/lower, your spectrum will be compressed/streched accordingly"
                  ),
                  hr(),
-                 hr(),
+                 column(12, "Press 'ctrl' & '-' or '+' to adjust the object sizes if necessary."),
                  column(12, "Move your mouse over the graph to view meta data."),
                  plotOutput(outputId = "plot.own",
                             hover = hoverOpts(id = "plot_hover",
@@ -533,18 +533,17 @@ ui <- fluidPage(
       ) # end tabsetPanel
     ) # end mainPanel
   ), # end row
-  fluidRow(
-    tags$footer("Find the corresponding publication to this app at ", tags$a(href="http://www.maki-science.org", "(to be changed)", target="_blank"),
-                align = "center", 
-                style = "
-                  position: absolute;
-                  bottom:0;
-                  width:100%;
-                  color: white;
-                  padding: 10px;
-                  background-color: lightgrey;
-                  z-index: 1000;"
-                )
+  fluidRow(style = "width:100%;",
+           mainPanel("Find the corresponding publication to this app at ", tags$a(href="http://www.maki-science.org", "(to be changed)", target="_blank"),
+                     align = "center", 
+                     style = "
+                   position:absolute;
+                   bottom:0;
+                   width:100%;
+                   color: white;
+                   padding: 10px;
+                   background-color: lightgrey;"
+           )
   )
 ) # end fluidPage ; end ui
 
