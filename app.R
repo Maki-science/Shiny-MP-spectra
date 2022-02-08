@@ -394,6 +394,7 @@ ui <- fluidPage(
     titlePanel(
               h1("Shiny Raman-MP Spectra", align = "center")
                ),
+    column(12, align = "center", "Press 'ctrl' & '-' or '+' to adjust the object sizes if necessary."),
     mainPanel(align = "center", width = 12,
       tabsetPanel(
         ##### ui variants #####
@@ -437,7 +438,6 @@ ui <- fluidPage(
                         )
                  ),
                  hr(),
-                 column(12, "Press 'ctrl' & '-' or '+' to adjust the object sizes if necessary."),
                  column(12, "Move your mouse over the graph to view meta data."),
                  plotOutput(outputId = "plot.variants",
                             hover = hoverOpts(id = "plot_hover",
@@ -485,7 +485,6 @@ ui <- fluidPage(
                         )
                  ),
                  hr(),
-                 column(12, "Press 'ctrl' & '-' or '+' to adjust the object sizes if necessary."),
                  column(12, "Move your mouse over the graph to view meta data."),
                  plotOutput(outputId = "plot.comp",
                             hover = hoverOpts(id = "plot_hover",
@@ -522,7 +521,6 @@ ui <- fluidPage(
                         "note: if your resolution is higher/lower, your spectrum will be compressed/streched accordingly"
                  ),
                  hr(),
-                 column(12, "Press 'ctrl' & '-' or '+' to adjust the object sizes if necessary."),
                  column(12, "Move your mouse over the graph to view meta data."),
                  plotOutput(outputId = "plot.own",
                             hover = hoverOpts(id = "plot_hover",
