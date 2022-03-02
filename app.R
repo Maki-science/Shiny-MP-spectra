@@ -6,6 +6,7 @@
 # for rective plot content I followed https://stackoverflow.com/questions/42104031/shiny-interactive-ggplot-with-vertical-line-and-data-labels-at-mouse-hover-poin
 require(ggplot2)
 require(shiny)
+require(pracma)
 
 theme_set(theme( # Theme (Hintergrund, Textgröße, Text-Positionen und -Ausrichtung)
   axis.text.x = element_text(size=10, angle=0, vjust=0.0), 
@@ -220,7 +221,7 @@ server <- function(input, output, session){
                       )
     # check whether own spectrum is provided (already)
     if(input$own.spec == ""){ # if not, insert NAs
-      od <- rep("NA", 1600)
+      od <- rep(NA, 1600)
     }
     else{ # if yes, process them
       # check whether user input has same length as our spectra
@@ -243,8 +244,11 @@ server <- function(input, output, session){
         else{
           seqin <- round(seq(length.out = length(temp$wavenumber) %% length(od), from = 1, to = 1600))
           for(i in 1:length(seqin)){
-            od <- append(od, "NA", after = seqin[i])
+            od <- append(od, NA, after = seqin[i])
           }
+          # interpolate the NAs to have a smooth line (without gaps) in the graph
+          od <- as.numeric(od)
+          od <- interp1(x = temp$wavenumber, y = od, xi = temp$wavenumber, "linear")
         }
       }
     }
@@ -256,6 +260,7 @@ server <- function(input, output, session){
                       v = 1,
                       incWater = "n.a."
     )
+    
     temp <- rbind(temp, own)
     temp$amp <- as.numeric(temp$amp)
     
@@ -359,7 +364,7 @@ server <- function(input, output, session){
                colour = interaction(pol, factor(v), incWater, sep = " | ")
            )
     )+
-      geom_line()+
+      geom_line(na.rm = TRUE)+
       coord_cartesian(xlim = c(500.51919, 3681.31383))+
       ylab("Raman-Intensity")+
       xlab( expression(Wavenumber~cm^{-1}) )+
