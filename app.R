@@ -80,7 +80,7 @@ server <- function(input, output, session){
     
     # check current wavenumber and whether there is a known component at this point
     for(i in 1:nrow(components)){
-      if(values$loc <= (components$rmax[i] + 5) && values$loc >= (components$rmin[i] - 5)){
+      if(values$loc <= (components$rmax[i] + 10) && values$loc >= (components$rmin[i] - 10)){
         values$component <- append(values$component, paste("~", components$value[i], ", ", components$cname[i], sep = ""))
       }
     }
@@ -302,7 +302,14 @@ server <- function(input, output, session){
           g <- g+ geom_vline(aes(xintercept = values$loc), linetype = "dotted")+
                   geom_text(aes(x = values$loc,
                         y = max(amp),
-                        label = {suppressWarnings(if(length(values$component > 1)){paste(values$component, collapse = "\n")}else{""})},
+                        label = suppressWarnings(
+                                                if(length(values$component > 1)){
+                                                  paste(values$component, collapse = "\n")
+                                                }
+                                                else{
+                                                   ""
+                                                }
+                                              ),
                         vjust = length(values$component)/4.8,
                         hjust = values$hjust
                         ),
@@ -339,8 +346,15 @@ server <- function(input, output, session){
         g <- g+ geom_vline(aes(xintercept = values$loc), linetype = "dotted")+
           geom_text(aes(x = values$loc,
                         y = max(amp),
-                        label = values$component,
-                        vjust = 0,
+                        label = suppressWarnings(
+                                              if(length(values$component > 1)){
+                                                paste(values$component, collapse = "\n")
+                                              }
+                                              else{
+                                                ""
+                                              }
+                                            ),
+                        vjust = length(values$component)/4.8,
                         hjust = values$hjust
           ),
           size=4,
@@ -375,8 +389,15 @@ server <- function(input, output, session){
         g <- g+ geom_vline(aes(xintercept = values$loc), linetype = "dotted")+
           geom_text(aes(x = values$loc,
                         y = max(amp, na.rm = TRUE),
-                        label = values$component,
-                        vjust = 0,
+                        label = suppressWarnings(
+                                                if(length(values$component > 1)){
+                                                  paste(values$component, collapse = "\n")
+                                                }
+                                                else{
+                                                  ""
+                                                }
+                                              ),
+                        vjust = length(values$component)/4.8,
                         hjust = values$hjust
           ),
           size=4,
