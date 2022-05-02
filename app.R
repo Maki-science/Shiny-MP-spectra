@@ -72,19 +72,16 @@ server <- function(input, output, session){
   
   
   ##### use reactive values for mouse position in plot #####
-  values <- reactiveValues(loc = 0, component = "", hjust = -0.1, locy = 0)
+  values <- reactiveValues(loc = 0, component = list(), hjust = -0.1, locy = 0)
   
   observeEvent(input$plot_hover$x, {
     values$loc <- input$plot_hover$x
+    values$component <- list(paste("current position: ", round(values$loc)))
     
     # check current wavenumber and whether there is a known component at this point
     for(i in 1:nrow(components)){
-      if(values$loc <= components$rmax[i] && values$loc >= components$rmin[i]){
-        values$component <- paste(round(values$loc), components$cname[i], sep = ", ")
-        break()
-      }
-      else{
-        values$component <- ""
+      if(values$loc <= (components$rmax[i] + 5) && values$loc >= (components$rmin[i] - 5)){
+        values$component <- append(values$component, paste("~", components$value[i], ", ", components$cname[i], sep = ""))
       }
     }
     
@@ -299,13 +296,14 @@ server <- function(input, output, session){
           theme(axis.text.y = element_blank(),
                 axis.ticks.y = element_blank())+
           scale_x_continuous(breaks = scales::pretty_breaks(n = 20))
+    
     if(values$loc > 400 && values$loc < 3700 && values$locy < max(plotData$temp$amp) && values$locy > 0){
           # reactive vertical line and text
           g <- g+ geom_vline(aes(xintercept = values$loc), linetype = "dotted")+
                   geom_text(aes(x = values$loc,
                         y = max(amp),
-                        label = values$component,
-                        vjust = 0,
+                        label = {suppressWarnings(if(length(values$component > 1)){paste(values$component, collapse = "\n")}else{""})},
+                        vjust = length(values$component)/4.8,
                         hjust = values$hjust
                         ),
                     size=4,
