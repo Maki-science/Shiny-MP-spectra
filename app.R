@@ -2,12 +2,12 @@
 #install.packages("shiny")
 #require(shiny)
 #runGitHub( "Shiny-MP-spectra", "Maki-science")
-
-# for rective plot content I followed https://stackoverflow.com/questions/42104031/shiny-interactive-ggplot-with-vertical-line-and-data-labels-at-mouse-hover-poin
+citation("shiny")
+# for reactive plot content I adapted ideas of https://stackoverflow.com/questions/42104031/shiny-interactive-ggplot-with-vertical-line-and-data-labels-at-mouse-hover-poin
 require(ggplot2)
 require(shiny)
 require(pracma)
-
+citation("pracma")
 theme_set(theme( # Theme (Hintergrund, Textgröße, Text-Positionen und -Ausrichtung)
   axis.text.x = element_text(size=10, angle=0, vjust=0.0), 
   axis.text.y = element_text(size = 10), 
@@ -20,7 +20,7 @@ theme_set(theme( # Theme (Hintergrund, Textgröße, Text-Positionen und -Ausrich
 )
 )
 
-
+# setwd("//btb1r2.bio.uni-bayreuth.de/home/PhD/Paper/Eigene/Vinay/Shiny MP spectra/")
 # read in prepared data 
 # this is just done to skip the time consuming step of preparing the data
 mydata <- read.table(
@@ -418,6 +418,8 @@ ui <- fluidPage(
     titlePanel(
               h1("Shiny Raman-MP Spectra", align = "center")
                ),
+    column(12, style="font-size:1.4em", align = "center", tags$a(href="http://www.maki-science.org", "Spatio-chemical analysis of the plastisphere using Raman spectroscopy", target="_blank")),
+    column(12, style="font-size:0.6em", align = "center", "VKB Narayana, A. Ramsperger, M. Kiene, J. Brehm, M. Löder, C. Laforsch 2022"),
     column(12, align = "center", "Press 'ctrl' & '-' or '+' to adjust the object sizes if necessary."),
     mainPanel(align = "center", width = 12,
       tabsetPanel(
@@ -554,19 +556,19 @@ ui <- fluidPage(
         ) # end tabPanel
       ) # end tabsetPanel
     ) # end mainPanel
-  ), # end row
-  fluidRow(style = "width:100%;",
-           mainPanel("Find the corresponding publication to this app at ", tags$a(href="http://www.maki-science.org", "(to be changed)", target="_blank"),
-                     align = "center", 
-                     style = "
-                   position:absolute;
-                   bottom:0;
-                   width:100%;
-                   color: white;
-                   padding: 10px;
-                   background-color: lightgrey;"
-           )
-  )
+  )#, # end row
+  # fluidRow(style = "width:100%;",
+  #          mainPanel("Find the corresponding publication to this app at ", tags$a(href="http://www.maki-science.org", "(to be changed)", target="_blank"),
+  #                    align = "center", 
+  #                    style = "
+  #                  position:absolute;
+  #                  bottom:0;
+  #                  width:100%;
+  #                  color: white;
+  #                  padding: 10px;
+  #                  background-color: lightgrey;"
+  #          )
+  # )
 ) # end fluidPage ; end ui
 
 shinyApp(ui = ui, server = server)
