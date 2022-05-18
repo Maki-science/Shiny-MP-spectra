@@ -18,6 +18,10 @@ proteins	746-747	746	747
 proteins	833	833	833
 proteins	871	871	871
 proteins	876	876	876
+proteins	747	747	747
+proteins	833	833	833
+proteins	871	871	871
+proteins	876	876	876
 proteins	1004	1004	1004
 proteins	1203	1203	1203
 proteins	1540	1540	1540
@@ -65,3 +69,33 @@ water	3200-3500	3200	3500
 cytochrome c	1123	1123	1123
 cytochrome c	1129	1129	1129
 cytochrome c	1596	1596	1596
+Polyamide (PA)	1632	1632	1632
+Polyamide (PA)	3296	3296	3296
+Polyethylene (PE)	2842	2842	2842
+Polyethylene (PE)	2877	2877	2877
+Polyethyleneterephtalate (PET)	1608	1608	1608
+Polyethyleneterephtalate (PET)	1719	1719	1719
+Polycarbonate (PC)	884	884	884
+Polycarbonate (PC)	1109	1109	1109
+Polycarbonate (PC)	3073	3073	3073
+Acrylonitrile Butadiene Styrene (ABS)	1003	1003	1003
+Acrylonitrile Butadiene Styrene (ABS)	1606	1606	1606
+Acrylonitrile Butadiene Styrene (ABS)	1666	1666	1666
+Acrylonitrile Butadiene Styrene (ABS)	2236	2236	2236
+Styrene Acrylonitrile (SAN)	1003	1003	1003
+Styrene Acrylonitrile (SAN)	1606	1606	1606
+Styrene Acrylonitrile (SAN)	2236	2236	2236
+Polystyrene (PS)	1003	1003	1003
+Polystyrene (PS)	1606	1606	1606
+Polyvinylchloride (PVC)	637	637	637
+Polyvinylchloride (PVC)	694	694	694
+Polyurethane (PU)	1181	1181	1181
+Polyurethane (PU)	1247	1247	1247
+Polyurethane (PU)	1309	1309	1309
+Polyurethane (PU)	1613	1613	1613
+Polyoximethylene (POM)	916	916	916
+Polypropylene (PP)	802	802	802
+Polypropylene (PP)	834	834	834
+Polypropylene (PP)	2834	2834	2834
+Polypropylene (PP)	2879	2879	2879
+Polypropylene (PP)	2954	2954	2954
