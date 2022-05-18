@@ -76,7 +76,7 @@ server <- function(input, output, session){
   
   observeEvent(input$plot_hover$x, {
     values$loc <- input$plot_hover$x
-    values$component <- list(paste("current position: ", round(values$loc)))
+    values$component <- list(paste("current position: ", round(values$loc), "\n", "typical peak for:"))
     
     # check current wavenumber and whether there is a known component at this point
     for(i in 1:nrow(components)){
@@ -301,7 +301,7 @@ server <- function(input, output, session){
           # reactive vertical line and text
           g <- g+ geom_vline(aes(xintercept = values$loc), linetype = "dotted")+
                   geom_text(aes(x = values$loc,
-                        y = max(amp),
+                        y = 0.8,
                         label = suppressWarnings(
                                                 if(length(values$component > 1)){
                                                   paste(values$component, collapse = "\n")
@@ -310,7 +310,7 @@ server <- function(input, output, session){
                                                    ""
                                                 }
                                               ),
-                        vjust = length(values$component)/4.8,
+                        vjust = length(values$component)/10,
                         hjust = values$hjust
                         ),
                     size=4,
@@ -345,7 +345,7 @@ server <- function(input, output, session){
         # reactive vertical line and text
         g <- g+ geom_vline(aes(xintercept = values$loc), linetype = "dotted")+
           geom_text(aes(x = values$loc,
-                        y = max(amp),
+                        y = 0.8,
                         label = suppressWarnings(
                                               if(length(values$component > 1)){
                                                 paste(values$component, collapse = "\n")
@@ -354,7 +354,7 @@ server <- function(input, output, session){
                                                 ""
                                               }
                                             ),
-                        vjust = length(values$component)/4.8,
+                        vjust = length(values$component)/10,
                         hjust = values$hjust
           ),
           size=4,
@@ -388,7 +388,7 @@ server <- function(input, output, session){
         # reactive vertical line and text
         g <- g+ geom_vline(aes(xintercept = values$loc), linetype = "dotted")+
           geom_text(aes(x = values$loc,
-                        y = max(amp, na.rm = TRUE),
+                        y = 0.8,
                         label = suppressWarnings(
                                                 if(length(values$component > 1)){
                                                   paste(values$component, collapse = "\n")
@@ -397,7 +397,7 @@ server <- function(input, output, session){
                                                   ""
                                                 }
                                               ),
-                        vjust = length(values$component)/4.8,
+                        vjust = length(values$component)/10,
                         hjust = values$hjust
           ),
           size=4,
